@@ -1,0 +1,15 @@
+[Unit]
+Description=Maps Backend API
+After=network.target postgresql.service redis.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/maps-backend
+ExecStart=/opt/maps-backend/maps-backend
+Restart=always
+RestartSec=3
+EnvironmentFile=/opt/maps-backend/.env
+
+[Install]
+WantedBy=multi-user.target
