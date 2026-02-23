@@ -4,3 +4,4 @@ pub mod room;
 pub mod room_member;
 pub mod trip;
 pub mod user;
+pub mod waypoint;
