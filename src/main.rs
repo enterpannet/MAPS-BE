@@ -2,6 +2,7 @@ mod config;
 mod db;
 mod error;
 mod handlers;
+mod jobs;
 mod middleware;
 mod migrate;
 mod models;
@@ -37,11 +38,13 @@ async fn main() -> anyhow::Result<()> {
                 .allow_headers(Any),
         )
         .with_state(AppState {
-            db,
+            db: db.clone(),
             redis,
             config: config.clone(),
             rooms: Arc::new(RwLock::new(HashMap::new())),
         });
+
+    jobs::gas_station_sync::spawn_scheduler(db.clone());
 
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
     tracing::info!("Server listening on http://{}", addr);

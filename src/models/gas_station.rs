@@ -18,6 +18,7 @@ pub struct Model {
     #[sea_orm(column_name = "external_id")]
     pub external_id: Option<String>,
     pub created_at: DateTimeWithTimeZone,
+    pub updated_at: Option<DateTimeWithTimeZone>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
