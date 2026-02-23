@@ -9,13 +9,13 @@ use tracing;
 
 use crate::AppState;
 
-const RADIUS_KM: f64 = 100.0;
-const MAX_STATIONS: u64 = 200;
+const DEFAULT_RADIUS_KM: f64 = 30.0;
+const DEFAULT_MAX_STATIONS: u64 = 100;
 
 /// ประมาณ 1 องศา latitude ≈ 111 km
-fn bbox_from_center(lat: f64, lng: f64) -> (f64, f64, f64, f64) {
-    let delta_lat = RADIUS_KM / 111.0;
-    let delta_lng = RADIUS_KM / (111.0 * (lat.to_radians().cos()).max(0.01));
+fn bbox_from_center(lat: f64, lng: f64, radius_km: f64) -> (f64, f64, f64, f64) {
+    let delta_lat = radius_km / 111.0;
+    let delta_lng = radius_km / (111.0 * (lat.to_radians().cos()).max(0.01));
     let south = lat - delta_lat;
     let north = lat + delta_lat;
     let west = lng - delta_lng;
@@ -27,6 +27,10 @@ fn bbox_from_center(lat: f64, lng: f64) -> (f64, f64, f64, f64) {
 pub struct GasStationsQuery {
     pub lat: f64,
     pub lng: f64,
+    #[serde(default)]
+    pub radius_km: Option<f64>,
+    #[serde(default)]
+    pub limit: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -46,14 +50,23 @@ pub async fn list(
     AuthUser(_auth): AuthUser,
     Query(q): Query<GasStationsQuery>,
 ) -> Result<Json<Vec<GasStationResponse>>, AppError> {
-    let (south, west, north, east) = bbox_from_center(q.lat, q.lng);
+    let radius_km = q
+        .radius_km
+        .filter(|r| (10.0..=100.0).contains(r))
+        .unwrap_or(DEFAULT_RADIUS_KM);
+    let max_stations = q
+        .limit
+        .filter(|l| (20..=200).contains(l))
+        .unwrap_or(DEFAULT_MAX_STATIONS);
+
+    let (south, west, north, east) = bbox_from_center(q.lat, q.lng, radius_km);
 
     let from_db = match gas_station::Entity::find()
         .filter(gas_station::Column::Lat.gte(south))
         .filter(gas_station::Column::Lat.lte(north))
         .filter(gas_station::Column::Lng.gte(west))
         .filter(gas_station::Column::Lng.lte(east))
-        .limit(MAX_STATIONS)
+        .limit(500)
         .all(&state.db)
         .await
     {
@@ -64,7 +77,21 @@ pub async fn list(
         }
     };
 
-    let stations = from_db
+    let mut sorted: Vec<_> = from_db
+        .into_iter()
+        .map(|s| {
+            let dist_sq = (s.lat - q.lat).powi(2) + (s.lng - q.lng).powi(2);
+            (s, dist_sq)
+        })
+        .collect();
+    sorted.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+    let nearest: Vec<_> = sorted
+        .into_iter()
+        .take(max_stations as usize)
+        .map(|(s, _)| s)
+        .collect();
+
+    let stations = nearest
         .into_iter()
         .map(|s| GasStationResponse {
             id: s.id,
