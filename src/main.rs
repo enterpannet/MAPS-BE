@@ -1,9 +1,9 @@
 mod config;
 mod db;
-mod migrate;
 mod error;
 mod handlers;
 mod middleware;
+mod migrate;
 mod models;
 mod routes;
 mod services;
@@ -29,7 +29,12 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .merge(routes::api())
-        .layer(CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any))
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any),
+        )
         .with_state(AppState {
             db,
             redis,

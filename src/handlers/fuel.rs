@@ -47,7 +47,8 @@ pub async fn create(
     Path(room_id): Path<String>,
     Json(req): Json<CreateFuelRecordRequest>,
 ) -> Result<Json<FuelRecordResponse>, AppError> {
-    let room_id = Uuid::parse_str(&room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
+    let room_id =
+        Uuid::parse_str(&room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
 
     let _member = room_member::Entity::find()
         .filter(room_member::Column::RoomId.eq(room_id))
@@ -58,14 +59,17 @@ pub async fn create(
         .ok_or_else(|| AppError::Forbidden)?;
 
     let trip_id = if let Some(tid) = &req.trip_id {
-        let tid = Uuid::parse_str(tid).map_err(|_| AppError::BadRequest("Invalid trip_id".into()))?;
+        let tid =
+            Uuid::parse_str(tid).map_err(|_| AppError::BadRequest("Invalid trip_id".into()))?;
         let t = trip::Entity::find_by_id(tid)
             .one(&state.db)
             .await
             .map_err(|_| AppError::Internal)?
             .ok_or_else(|| AppError::NotFound("Trip not found".into()))?;
         if t.room_id != room_id {
-            return Err(AppError::BadRequest("Trip does not belong to this room".into()));
+            return Err(AppError::BadRequest(
+                "Trip does not belong to this room".into(),
+            ));
         }
         tid
     } else {
@@ -87,7 +91,10 @@ pub async fn create(
                     created_at: ActiveValue::Set(now.into()),
                     ..Default::default()
                 };
-                default_trip.insert(&state.db).await.map_err(|_| AppError::Internal)?;
+                default_trip
+                    .insert(&state.db)
+                    .await
+                    .map_err(|_| AppError::Internal)?;
                 new_id
             }
         }
@@ -117,7 +124,10 @@ pub async fn create(
         ..Default::default()
     };
 
-    record.insert(&state.db).await.map_err(|_| AppError::Internal)?;
+    record
+        .insert(&state.db)
+        .await
+        .map_err(|_| AppError::Internal)?;
 
     let trip_model = trip::Entity::find_by_id(trip_id)
         .one(&state.db)
@@ -160,7 +170,8 @@ pub async fn list(
     Path(room_id): Path<String>,
     Query(query): Query<ListFuelQuery>,
 ) -> Result<Json<Vec<FuelRecordResponse>>, AppError> {
-    let room_id = Uuid::parse_str(&room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
+    let room_id =
+        Uuid::parse_str(&room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
 
     let _member = room_member::Entity::find()
         .filter(room_member::Column::RoomId.eq(room_id))
@@ -170,8 +181,7 @@ pub async fn list(
         .map_err(|_| AppError::Internal)?
         .ok_or_else(|| AppError::Forbidden)?;
 
-    let mut q = fuel_record::Entity::find()
-        .filter(fuel_record::Column::RoomId.eq(room_id));
+    let mut q = fuel_record::Entity::find().filter(fuel_record::Column::RoomId.eq(room_id));
     if let Some(tid) = &query.trip_id {
         if let Ok(tid_uuid) = Uuid::parse_str(tid) {
             q = q.filter(fuel_record::Column::TripId.eq(tid_uuid));
@@ -183,8 +193,18 @@ pub async fn list(
         .await
         .map_err(|_| AppError::Internal)?;
 
-    let room_ids: Vec<Uuid> = records.iter().map(|r| r.room_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
-    let trip_ids: Vec<Uuid> = records.iter().map(|r| r.trip_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
+    let room_ids: Vec<Uuid> = records
+        .iter()
+        .map(|r| r.room_id)
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
+    let trip_ids: Vec<Uuid> = records
+        .iter()
+        .map(|r| r.trip_id)
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
     let rooms_map: std::collections::HashMap<Uuid, String> = room::Entity::find()
         .filter(room::Column::Id.is_in(room_ids))
         .all(&state.db)
@@ -247,8 +267,18 @@ pub async fn list_all(
         .await
         .map_err(|_| AppError::Internal)?;
 
-    let room_ids: Vec<Uuid> = records.iter().map(|r| r.room_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
-    let trip_ids: Vec<Uuid> = records.iter().map(|r| r.trip_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
+    let room_ids: Vec<Uuid> = records
+        .iter()
+        .map(|r| r.room_id)
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
+    let trip_ids: Vec<Uuid> = records
+        .iter()
+        .map(|r| r.trip_id)
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
     let rooms_map: std::collections::HashMap<Uuid, String> = if room_ids.is_empty() {
         std::collections::HashMap::new()
     } else {

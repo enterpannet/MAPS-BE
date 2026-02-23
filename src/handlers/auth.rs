@@ -4,7 +4,7 @@ use crate::models::user;
 use crate::services::auth;
 use axum::extract::State;
 use axum::Json;
-use sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait, QueryFilter, ColumnTrait, Set};
+use sea_orm::{ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, QueryFilter, Set};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

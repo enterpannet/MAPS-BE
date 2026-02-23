@@ -26,9 +26,11 @@ where
         let token = auth_header.ok_or((StatusCode::UNAUTHORIZED, "Missing token"))?;
 
         let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "secret".into());
-        let claims = auth::decode_token(token, &secret).map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid token"))?;
+        let claims = auth::decode_token(token, &secret)
+            .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid token"))?;
 
-        let id = Uuid::parse_str(&claims.sub).map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid token"))?;
+        let id = Uuid::parse_str(&claims.sub)
+            .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid token"))?;
 
         Ok(AuthUser(auth::AuthUser {
             id,

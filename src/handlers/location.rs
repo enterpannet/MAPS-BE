@@ -3,7 +3,9 @@ use crate::middleware::auth::AuthUser;
 use crate::models::{location, room_member, user};
 use axum::extract::State;
 use axum::Json;
-use sea_orm::{ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -33,7 +35,8 @@ pub async fn report(
     AuthUser(auth): AuthUser,
     Json(req): Json<ReportLocationRequest>,
 ) -> Result<Json<LocationResponse>, AppError> {
-    let room_id = Uuid::parse_str(&req.room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
+    let room_id = Uuid::parse_str(&req.room_id)
+        .map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
 
     // Verify user is in room
     let _member = room_member::Entity::find()
@@ -58,7 +61,9 @@ pub async fn report(
         ..Default::default()
     };
 
-    loc.insert(&state.db).await.map_err(|_| AppError::Internal)?;
+    loc.insert(&state.db)
+        .await
+        .map_err(|_| AppError::Internal)?;
 
     let display_name = user::Entity::find_by_id(auth.id)
         .one(&state.db)
@@ -78,7 +83,9 @@ pub async fn report(
         "created_at": now.to_rfc3339(),
     });
     let mut rooms = state.rooms.write().await;
-    let tx = rooms.entry(room_id).or_insert_with(|| tokio::sync::broadcast::channel(100).0);
+    let tx = rooms
+        .entry(room_id)
+        .or_insert_with(|| tokio::sync::broadcast::channel(100).0);
     let _ = tx.send(msg.to_string());
 
     Ok(Json(LocationResponse {
@@ -103,7 +110,8 @@ pub async fn list(
     AuthUser(auth): AuthUser,
     axum::extract::Query(params): axum::extract::Query<ListParams>,
 ) -> Result<Json<Vec<LocationResponse>>, AppError> {
-    let room_id = Uuid::parse_str(&params.room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
+    let room_id = Uuid::parse_str(&params.room_id)
+        .map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
 
     let _member = room_member::Entity::find()
         .filter(room_member::Column::RoomId.eq(room_id))
@@ -123,7 +131,12 @@ pub async fn list(
         .await
         .map_err(|_| AppError::Internal)?;
 
-    let user_ids: Vec<Uuid> = locations.iter().map(|l| l.user_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
+    let user_ids: Vec<Uuid> = locations
+        .iter()
+        .map(|l| l.user_id)
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
     let users_map: std::collections::HashMap<Uuid, Option<String>> = if user_ids.is_empty() {
         std::collections::HashMap::new()
     } else {

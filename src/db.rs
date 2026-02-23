@@ -1,6 +1,6 @@
 use anyhow::Result;
-use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use redis::aio::ConnectionManager;
+use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 
 pub async fn connect(database_url: &str) -> Result<DatabaseConnection> {
     let mut opt = ConnectOptions::new(database_url.to_owned());

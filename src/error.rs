@@ -25,10 +25,6 @@ impl IntoResponse for AppError {
             AppError::BadRequest(_) => (StatusCode::BAD_REQUEST, "Bad request"),
             AppError::Internal => (StatusCode::INTERNAL_SERVER_ERROR, "Internal error"),
         };
-        (
-            status,
-            Json(json!({ "error": message })),
-        )
-            .into_response()
+        (status, Json(json!({ "error": message }))).into_response()
     }
 }

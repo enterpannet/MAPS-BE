@@ -27,7 +27,8 @@ pub async fn list(
     AuthUser(auth): AuthUser,
     Path(room_id): Path<String>,
 ) -> Result<Json<Vec<TripResponse>>, AppError> {
-    let room_id = Uuid::parse_str(&room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
+    let room_id =
+        Uuid::parse_str(&room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
 
     let _member = room_member::Entity::find()
         .filter(room_member::Column::RoomId.eq(room_id))
@@ -63,7 +64,8 @@ pub async fn create(
     Path(room_id): Path<String>,
     Json(req): Json<CreateTripRequest>,
 ) -> Result<Json<TripResponse>, AppError> {
-    let room_id = Uuid::parse_str(&room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
+    let room_id =
+        Uuid::parse_str(&room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
 
     let _member = room_member::Entity::find()
         .filter(room_member::Column::RoomId.eq(room_id))
@@ -89,7 +91,10 @@ pub async fn create(
         ..Default::default()
     };
 
-    record.insert(&state.db).await.map_err(|_| AppError::Internal)?;
+    record
+        .insert(&state.db)
+        .await
+        .map_err(|_| AppError::Internal)?;
 
     Ok(Json(TripResponse {
         id: id.to_string(),

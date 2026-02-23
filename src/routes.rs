@@ -17,7 +17,10 @@ pub fn api() -> Router<AppState> {
         .route("/api/rooms/join", post(rooms::join_by_code))
         .route("/api/locations", post(location::report))
         .route("/api/locations", get(location::list))
-        .route("/api/rooms/:room_id/trips", get(trips::list).post(trips::create))
+        .route(
+            "/api/rooms/:room_id/trips",
+            get(trips::list).post(trips::create),
+        )
         .route("/api/rooms/:room_id/fuel", post(fuel::create))
         .route("/api/rooms/:room_id/fuel", get(fuel::list))
         .route("/api/fuel", get(fuel::list_all))
