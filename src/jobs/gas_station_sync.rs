@@ -80,11 +80,7 @@ async fn fetch_osm(
         r#"[out:json][timeout:25];(node["amenity"="fuel"]({},{},{},{});way["amenity"="fuel"]({},{},{},{}););out center;"#,
         south, west, north, east, south, west, north, east
     );
-    let res = client
-        .post(OVERPASS_URL)
-        .body(query)
-        .send()
-        .await?;
+    let res = client.post(OVERPASS_URL).body(query).send().await?;
     if !res.status().is_success() {
         return Err(SyncError::OverpassError);
     }
@@ -133,7 +129,10 @@ async fn fetch_osm(
 /// รัน sync ครั้งเดียว (ดึง OSM → upsert DB)
 pub async fn run_sync(db: &sea_orm::DatabaseConnection) {
     let tiles = region_tiles();
-    info!("Gas station sync: เริ่ม {} tiles (ไทย/ลาว/มาเล/จีน)", tiles.len());
+    info!(
+        "Gas station sync: เริ่ม {} tiles (ไทย/ลาว/มาเล/จีน)",
+        tiles.len()
+    );
 
     let client = match reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
@@ -185,7 +184,16 @@ pub async fn run_sync(db: &sea_orm::DatabaseConnection) {
                 }
             }
             Err(e) => {
-                warn!("Gas station sync: tile {}/{} failed ({},{},{},{}): {}", i + 1, tiles.len(), south, west, north, east, e);
+                warn!(
+                    "Gas station sync: tile {}/{} failed ({},{},{},{}): {}",
+                    i + 1,
+                    tiles.len(),
+                    south,
+                    west,
+                    north,
+                    east,
+                    e
+                );
             }
         }
         if i + 1 < tiles.len() {
