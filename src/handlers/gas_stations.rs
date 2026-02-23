@@ -4,7 +4,7 @@ use crate::models::gas_station;
 use axum::extract::{Query, State};
 use axum::Json;
 use sea_orm::sea_query;
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QuerySelect, Set};
 use serde::{Deserialize, Serialize};
 
 use crate::AppState;
@@ -14,6 +14,7 @@ const NREL_URL: &str = "https://developer.nrel.gov/api/alt-fuel-stations/v1/near
 const OCM_URL: &str = "https://api.openchargemap.io/v3/poi/";
 const TANKERKOENIG_URL: &str = "https://creativecommons.tankerkoenig.de/json/list.php";
 const RADIUS_KM: f64 = 100.0;
+const MAX_STATIONS: u64 = 200;
 
 /// ประมาณ 1 องศา latitude ≈ 111 km
 fn bbox_from_center(lat: f64, lng: f64) -> (f64, f64, f64, f64) {
@@ -283,12 +284,13 @@ pub async fn list(
 ) -> Result<Json<Vec<GasStationResponse>>, AppError> {
     let (south, west, north, east) = bbox_from_center(q.lat, q.lng);
 
-    // 1. Query DB first
+    // 1. Query DB first (limit เพื่อลด lag)
     let from_db = gas_station::Entity::find()
         .filter(gas_station::Column::Lat.gte(south))
         .filter(gas_station::Column::Lat.lte(north))
         .filter(gas_station::Column::Lng.gte(west))
         .filter(gas_station::Column::Lng.lte(east))
+        .limit(MAX_STATIONS)
         .all(&state.db)
         .await
         .map_err(|_| AppError::Internal)?;
