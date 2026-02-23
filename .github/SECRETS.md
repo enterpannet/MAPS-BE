@@ -2,14 +2,25 @@
 
 ไปที่ **Settings → Secrets and variables → Actions** แล้วเพิ่ม:
 
-## Build & Test
+## Build & Test (มี default ไม่ต้องตั้งก็ได้)
 
 | Secret | Required | ค่า |
 |--------|----------|-----|
-| **DATABASE_URL** | ✅ | `postgres://maps:PASSWORD@localhost:5432/maps` |
-| **REDIS_URL** | ✅ | `redis://localhost:6379` หรือ `redis://:PASSWORD@localhost:6379` |
-| **JWT_SECRET** | ✅ | รหัสลับอย่างน้อย 32 ตัว (สำหรับ test) |
-| **PORT** | ❌ | `3001` (optional) |
+| **DATABASE_URL** | ❌ | default: `postgres://maps:maps@localhost:5432/maps` |
+| **REDIS_URL** | ❌ | default: `redis://localhost:6379` |
+| **JWT_SECRET** | ❌ | default: `ci-test-secret-key-32-chars-minimum` |
+| **PORT** | ❌ | default: `3001` |
+
+## Deploy (.env บน VPS)
+
+Workflow จะสร้าง `.env` บน VPS อัตโนมัติจาก secrets ด้านล่าง  
+ถ้าไม่ตั้ง จะใช้ค่า default (เหมาะสำหรับทดสอบ)
+
+| Secret | Required | ค่า |
+|--------|----------|-----|
+| **DATABASE_URL** | ❌ | สำหรับ production ควรตั้ง |
+| **REDIS_URL** | ❌ | สำหรับ production ควรตั้ง |
+| **JWT_SECRET** | ❌ | สำหรับ production ต้องตั้งให้แข็งแรง |
 
 ## Deploy
 

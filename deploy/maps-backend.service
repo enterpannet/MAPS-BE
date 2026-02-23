@@ -1,6 +1,6 @@
 [Unit]
 Description=Maps Backend API
-After=network.target postgresql.service redis.service
+After=network.target
 
 [Service]
 Type=simple

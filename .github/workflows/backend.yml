@@ -9,10 +9,10 @@ on:
     branches: [main, master]
 
 env:
-  DATABASE_URL: ${{ secrets.DATABASE_URL }}
-  REDIS_URL: ${{ secrets.REDIS_URL }}
-  JWT_SECRET: ${{ secrets.JWT_SECRET }}
-  PORT: ${{ secrets.PORT }}
+  DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://maps:maps@localhost:5432/maps' }}
+  REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-test-secret-key-32-chars-minimum' }}
+  PORT: ${{ secrets.PORT || '3001' }}
 
 jobs:
   build:
@@ -58,6 +58,8 @@ jobs:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download binary
         uses: actions/download-artifact@v4
         with:
@@ -70,6 +72,20 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
+      - name: Create .env for deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://maps:maps@localhost:5432/maps' }}
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'change-me-in-production-32-chars' }}
+          PORT: ${{ secrets.PORT || '3001' }}
+        run: |
+          {
+            echo "DATABASE_URL=$DATABASE_URL"
+            echo "REDIS_URL=$REDIS_URL"
+            echo "JWT_SECRET=$JWT_SECRET"
+            echo "PORT=$PORT"
+          } > .env.deploy
+
       - name: Deploy to VPS
         env:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/maps-backend' }}
@@ -78,7 +94,15 @@ jobs:
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
             "mkdir -p $DEPLOY_PATH"
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            .env.deploy ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$DEPLOY_PATH/.env
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             maps-backend ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$DEPLOY_PATH/maps-backend
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            deploy/maps-backend.service ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/maps-backend.service
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "chmod +x $DEPLOY_PATH/maps-backend && sudo systemctl restart maps-backend || true"
+            "chmod +x $DEPLOY_PATH/maps-backend && \
+             sudo mv /tmp/maps-backend.service /etc/systemd/system/maps-backend.service && \
+             sudo systemctl daemon-reload && \
+             sudo systemctl enable maps-backend && \
+             sudo systemctl restart maps-backend"
