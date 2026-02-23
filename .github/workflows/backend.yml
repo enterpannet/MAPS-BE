@@ -90,19 +90,20 @@ jobs:
         env:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/maps-backend' }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+          SSH_TARGET="${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $SSH_TARGET \
             "sudo mkdir -p $DEPLOY_PATH && sudo chown \$USER:\$USER $DEPLOY_PATH"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $SSH_TARGET \
+            "sudo systemctl stop maps-backend || true"
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            .env.deploy ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$DEPLOY_PATH/.env
+            .env.deploy $SSH_TARGET:$DEPLOY_PATH/.env
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            maps-backend ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$DEPLOY_PATH/maps-backend
+            maps-backend $SSH_TARGET:$DEPLOY_PATH/maps-backend
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            deploy/maps-backend.service ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/maps-backend.service
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            deploy/maps-backend.service $SSH_TARGET:/tmp/maps-backend.service
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $SSH_TARGET \
             "chmod +x $DEPLOY_PATH/maps-backend && \
              sudo mv /tmp/maps-backend.service /etc/systemd/system/maps-backend.service && \
              sudo systemctl daemon-reload && \
              sudo systemctl enable maps-backend && \
-             sudo systemctl restart maps-backend"
+             sudo systemctl start maps-backend"
