@@ -21,8 +21,14 @@ pub fn api() -> Router<AppState> {
             "/api/rooms/:room_id/trips",
             get(trips::list).post(trips::create),
         )
-        .route("/api/rooms/:room_id/waypoints", get(waypoints::list).post(waypoints::create))
-        .route("/api/rooms/:room_id/waypoints/:waypoint_id", delete(waypoints::delete))
+        .route(
+            "/api/rooms/:room_id/waypoints",
+            get(waypoints::list).post(waypoints::create),
+        )
+        .route(
+            "/api/rooms/:room_id/waypoints/:waypoint_id",
+            delete(waypoints::delete),
+        )
         .route("/api/rooms/:room_id/fuel", post(fuel::create))
         .route("/api/rooms/:room_id/fuel", get(fuel::list))
         .route("/api/fuel", get(fuel::list_all))

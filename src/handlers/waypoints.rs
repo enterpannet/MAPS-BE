@@ -12,7 +12,11 @@ use uuid::Uuid;
 
 use crate::AppState;
 
-async fn check_room_member(db: &sea_orm::DatabaseConnection, room_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+async fn check_room_member(
+    db: &sea_orm::DatabaseConnection,
+    room_id: Uuid,
+    user_id: Uuid,
+) -> Result<(), AppError> {
     let _ = room_member::Entity::find()
         .filter(room_member::Column::RoomId.eq(room_id))
         .filter(room_member::Column::UserId.eq(user_id))
@@ -52,7 +56,8 @@ pub async fn list(
     AuthUser(auth): AuthUser,
     Path(room_id): Path<String>,
 ) -> Result<Json<Vec<WaypointResponse>>, AppError> {
-    let room_id = Uuid::parse_str(&room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
+    let room_id =
+        Uuid::parse_str(&room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
     check_room_member(&state.db, room_id, auth.id).await?;
 
     let waypoints = waypoint::Entity::find()
@@ -86,7 +91,8 @@ pub async fn create(
     Path(room_id): Path<String>,
     Json(req): Json<CreateWaypointRequest>,
 ) -> Result<Json<WaypointResponse>, AppError> {
-    let room_id = Uuid::parse_str(&room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
+    let room_id =
+        Uuid::parse_str(&room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
     check_room_member(&state.db, room_id, auth.id).await?;
 
     if !valid_type(&req.waypoint_type) {
@@ -135,8 +141,10 @@ pub async fn delete(
     AuthUser(auth): AuthUser,
     Path((room_id, waypoint_id)): Path<(String, String)>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let room_id = Uuid::parse_str(&room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
-    let waypoint_id = Uuid::parse_str(&waypoint_id).map_err(|_| AppError::BadRequest("Invalid waypoint_id".into()))?;
+    let room_id =
+        Uuid::parse_str(&room_id).map_err(|_| AppError::BadRequest("Invalid room_id".into()))?;
+    let waypoint_id = Uuid::parse_str(&waypoint_id)
+        .map_err(|_| AppError::BadRequest("Invalid waypoint_id".into()))?;
 
     check_room_member(&state.db, room_id, auth.id).await?;
 
