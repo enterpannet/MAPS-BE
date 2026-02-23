@@ -28,6 +28,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let app = Router::new()
+        .route("/health", axum::routing::get(|| async { "ok" }))
         .merge(routes::api())
         .layer(
             CorsLayer::new()
