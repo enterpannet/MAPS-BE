@@ -6,13 +6,17 @@ use serde::{Deserialize, Serialize};
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i64,
-    pub osm_id: i64,
+    pub osm_id: Option<i64>,
     #[sea_orm(column_name = "osm_type")]
-    pub osm_type: String,
+    pub osm_type: Option<String>,
     pub lat: f64,
     pub lng: f64,
     pub name: Option<String>,
     pub brand: Option<String>,
+    #[sea_orm(column_name = "source")]
+    pub source: String,
+    #[sea_orm(column_name = "external_id")]
+    pub external_id: Option<String>,
     pub created_at: DateTimeWithTimeZone,
 }
 
