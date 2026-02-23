@@ -65,7 +65,12 @@ struct GasStationInsert {
 }
 
 // --- OSM (Overpass) - ทั่วโลก ---
-async fn fetch_osm(south: f64, west: f64, north: f64, east: f64) -> Result<Vec<GasStationInsert>, AppError> {
+async fn fetch_osm(
+    south: f64,
+    west: f64,
+    north: f64,
+    east: f64,
+) -> Result<Vec<GasStationInsert>, AppError> {
     let query = format!(
         r#"[out:json][timeout:25];(node["amenity"="fuel"]({},{},{},{});way["amenity"="fuel"]({},{},{},{}););out center;"#,
         south, west, north, east, south, west, north, east
@@ -87,9 +92,15 @@ async fn fetch_osm(south: f64, west: f64, north: f64, east: f64) -> Result<Vec<G
     let mut seen = std::collections::HashSet::new();
     for el in elements {
         let (lat, lng) = if el["type"] == "node" {
-            (el["lat"].as_f64().unwrap_or(0.0), el["lon"].as_f64().unwrap_or(0.0))
+            (
+                el["lat"].as_f64().unwrap_or(0.0),
+                el["lon"].as_f64().unwrap_or(0.0),
+            )
         } else if let Some(c) = el.get("center") {
-            (c["lat"].as_f64().unwrap_or(0.0), c["lon"].as_f64().unwrap_or(0.0))
+            (
+                c["lat"].as_f64().unwrap_or(0.0),
+                c["lon"].as_f64().unwrap_or(0.0),
+            )
         } else {
             continue;
         };
@@ -124,7 +135,11 @@ async fn fetch_nrel(lat: f64, lng: f64, api_key: &str) -> Result<Vec<GasStationI
         NREL_URL, lat, lng, radius_miles, api_key
     );
     let client = reqwest::Client::new();
-    let res = client.get(&url).send().await.map_err(|_| AppError::Internal)?;
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|_| AppError::Internal)?;
     if !res.status().is_success() {
         return Ok(vec![]);
     }
@@ -133,12 +148,22 @@ async fn fetch_nrel(lat: f64, lng: f64, api_key: &str) -> Result<Vec<GasStationI
     let stations = json["fuel_stations"].as_array().unwrap_or(&empty);
     let mut out = Vec::new();
     for s in stations {
-        let id = s["id"].as_i64().or_else(|| s["id"].as_str().and_then(|x| x.parse().ok())).unwrap_or(0);
+        let id = s["id"]
+            .as_i64()
+            .or_else(|| s["id"].as_str().and_then(|x| x.parse().ok()))
+            .unwrap_or(0);
         let lat = s["latitude"].as_f64().unwrap_or(0.0);
         let lng = s["longitude"].as_f64().unwrap_or(0.0);
         let name = s["station_name"].as_str().map(String::from);
-        let brand = s.get("ev_network").and_then(|v| v.as_str()).map(String::from)
-            .or_else(|| s.get("cards_accepted").and_then(|v| v.as_str()).map(String::from));
+        let brand = s
+            .get("ev_network")
+            .and_then(|v| v.as_str())
+            .map(String::from)
+            .or_else(|| {
+                s.get("cards_accepted")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+            });
         out.push(GasStationInsert {
             source: "nrel".into(),
             external_id: id.to_string(),
@@ -160,7 +185,11 @@ async fn fetch_ocm(lat: f64, lng: f64, api_key: &str) -> Result<Vec<GasStationIn
         OCM_URL, lat, lng, api_key
     );
     let client = reqwest::Client::new();
-    let res = client.get(&url).send().await.map_err(|_| AppError::Internal)?;
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|_| AppError::Internal)?;
     if !res.status().is_success() {
         return Ok(vec![]);
     }
@@ -172,12 +201,21 @@ async fn fetch_ocm(lat: f64, lng: f64, api_key: &str) -> Result<Vec<GasStationIn
         .unwrap_or(&empty_arr);
     let mut out = Vec::new();
     for item in items {
-        let id = item["ID"].as_i64().or_else(|| item["ID"].as_u64().map(|x| x as i64)).unwrap_or(0);
+        let id = item["ID"]
+            .as_i64()
+            .or_else(|| item["ID"].as_u64().map(|x| x as i64))
+            .unwrap_or(0);
         let addr = item.get("AddressInfo").and_then(|a| a.as_object());
         let lat = addr.and_then(|a| a["Latitude"].as_f64()).unwrap_or(0.0);
         let lng = addr.and_then(|a| a["Longitude"].as_f64()).unwrap_or(0.0);
-        let title = item.get("AddressInfo").and_then(|a| a["Title"].as_str()).map(String::from);
-        let operator = item.get("OperatorInfo").and_then(|o| o["Title"].as_str()).map(String::from);
+        let title = item
+            .get("AddressInfo")
+            .and_then(|a| a["Title"].as_str())
+            .map(String::from);
+        let operator = item
+            .get("OperatorInfo")
+            .and_then(|o| o["Title"].as_str())
+            .map(String::from);
         out.push(GasStationInsert {
             source: "ocm".into(),
             external_id: id.to_string(),
@@ -193,13 +231,21 @@ async fn fetch_ocm(lat: f64, lng: f64, api_key: &str) -> Result<Vec<GasStationIn
 }
 
 // --- Tankerkoenig - เยอรมนี ปั๊มน้ำมัน + ราคา ---
-async fn fetch_tankerkoenig(lat: f64, lng: f64, api_key: &str) -> Result<Vec<GasStationInsert>, AppError> {
+async fn fetch_tankerkoenig(
+    lat: f64,
+    lng: f64,
+    api_key: &str,
+) -> Result<Vec<GasStationInsert>, AppError> {
     let url = format!(
         "{}?lat={}&lng={}&rad=100&type=all&apikey={}",
         TANKERKOENIG_URL, lat, lng, api_key
     );
     let client = reqwest::Client::new();
-    let res = client.get(&url).send().await.map_err(|_| AppError::Internal)?;
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|_| AppError::Internal)?;
     if !res.status().is_success() {
         return Ok(vec![]);
     }

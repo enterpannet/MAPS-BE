@@ -51,9 +51,7 @@ pub async fn register(
     }
 
     if req.password.len() < 6 {
-        return Err(AppError::BadRequest(
-            "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร".into(),
-        ));
+        return Err(AppError::BadRequest("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร".into()));
     }
 
     let password_hash = auth::hash_password(&req.password)?;
