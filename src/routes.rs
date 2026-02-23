@@ -4,7 +4,7 @@ use axum::{
 };
 use tower_http::cors::CorsLayer;
 
-use crate::handlers::{auth, fuel, location, rooms, trips, waypoints};
+use crate::handlers::{auth, fuel, gas_stations, location, rooms, trips, waypoints};
 use crate::middleware::auth::AuthUser;
 use crate::AppState;
 
@@ -32,5 +32,6 @@ pub fn api() -> Router<AppState> {
         .route("/api/rooms/:room_id/fuel", post(fuel::create))
         .route("/api/rooms/:room_id/fuel", get(fuel::list))
         .route("/api/fuel", get(fuel::list_all))
+        .route("/api/gas-stations", get(gas_stations::list))
         .route("/api/ws/:room_id", get(crate::ws::handler))
 }

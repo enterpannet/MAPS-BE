@@ -1,4 +1,5 @@
 pub mod fuel_record;
+pub mod gas_station;
 pub mod location;
 pub mod room;
 pub mod room_member;
