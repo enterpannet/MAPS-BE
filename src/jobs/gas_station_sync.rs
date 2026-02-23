@@ -4,9 +4,18 @@
 
 use sea_orm::sea_query;
 use sea_orm::{EntityTrait, Set};
+use thiserror::Error;
 use tracing::{info, warn};
 
 use crate::models::gas_station;
+
+#[derive(Error, Debug)]
+enum SyncError {
+    #[error("HTTP request failed")]
+    Http(#[from] reqwest::Error),
+    #[error("Overpass API error")]
+    OverpassError,
+}
 
 const OVERPASS_URL: &str = "https://overpass-api.de/api/interpreter";
 /// หน่วงระหว่าง request เพื่อไม่ให้ Overpass rate limit (แนะนำ ~2 วินาที)
@@ -51,35 +60,35 @@ fn region_tiles() -> Vec<(f64, f64, f64, f64)> {
         }
         lat += step;
     }
-    tiles.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap().then(a.1.partial_cmp(&b.1).unwrap()));
+    tiles.sort_by(|a, b| {
+        a.0.partial_cmp(&b.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+    });
     tiles.dedup();
     tiles
 }
 
 async fn fetch_osm(
+    client: &reqwest::Client,
     south: f64,
     west: f64,
     north: f64,
     east: f64,
-) -> Result<Vec<GasStationInsert>, ()> {
+) -> Result<Vec<GasStationInsert>, SyncError> {
     let query = format!(
         r#"[out:json][timeout:25];(node["amenity"="fuel"]({},{},{},{});way["amenity"="fuel"]({},{},{},{}););out center;"#,
         south, west, north, east, south, west, north, east
     );
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
-        .build()
-        .map_err(|_| ())?;
     let res = client
         .post(OVERPASS_URL)
         .body(query)
         .send()
-        .await
-        .map_err(|_| ())?;
+        .await?;
     if !res.status().is_success() {
-        return Err(());
+        return Err(SyncError::OverpassError);
     }
-    let json: serde_json::Value = res.json().await.map_err(|_| ())?;
+    let json: serde_json::Value = res.json().await?;
     let empty_arr: Vec<serde_json::Value> = Vec::new();
     let elements = json["elements"].as_array().unwrap_or(&empty_arr);
     let mut out = Vec::new();
@@ -126,11 +135,22 @@ pub async fn run_sync(db: &sea_orm::DatabaseConnection) {
     let tiles = region_tiles();
     info!("Gas station sync: เริ่ม {} tiles (ไทย/ลาว/มาเล/จีน)", tiles.len());
 
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("Gas station sync: failed to create HTTP client: {}", e);
+            return;
+        }
+    };
+
     let mut total_upserted = 0usize;
     let now = chrono::Utc::now();
 
     for (i, (south, west, north, east)) in tiles.iter().enumerate() {
-        match fetch_osm(*south, *west, *north, *east).await {
+        match fetch_osm(&client, *south, *west, *north, *east).await {
             Ok(stations) => {
                 for g in &stations {
                     let am = gas_station::ActiveModel {
@@ -164,8 +184,8 @@ pub async fn run_sync(db: &sea_orm::DatabaseConnection) {
                     total_upserted += 1;
                 }
             }
-            Err(_) => {
-                warn!("Gas station sync: tile {}/{} failed ({},{},{},{})", i + 1, tiles.len(), south, west, north, east);
+            Err(e) => {
+                warn!("Gas station sync: tile {}/{} failed ({},{},{},{}): {}", i + 1, tiles.len(), south, west, north, east, e);
             }
         }
         if i + 1 < tiles.len() {

@@ -1,6 +1,40 @@
 # Rust / Cargo
 target/
 
+# Agent skills (installed locally, not for repo)
+.agents/
+.agent/
+.augment/
+.claude/
+.cline/
+.codebuddy/
+.commandcode/
+.continue/
+.crush/
+.factory/
+.goose/
+.iflow/
+.junie/
+.kilocode/
+.kiro/
+.kode/
+.mcpjam/
+.mux/
+.neovate/
+.openhands/
+.pi/
+.pochi/
+.qoder/
+.qwen/
+.roo/
+.trae/
+.vibe/
+.windsurf/
+.zencoder/
+.adal/
+skills/
+skills-lock.json
+
 # Env
 .env
 .env.local
