@@ -92,7 +92,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "mkdir -p $DEPLOY_PATH"
+            "sudo mkdir -p $DEPLOY_PATH && sudo chown $USER:$USER $DEPLOY_PATH"
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             .env.deploy ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$DEPLOY_PATH/.env
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
