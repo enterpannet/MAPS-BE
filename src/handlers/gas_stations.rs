@@ -5,6 +5,7 @@ use axum::extract::{Query, State};
 use axum::Json;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QuerySelect};
 use serde::{Deserialize, Serialize};
+use tracing;
 
 use crate::AppState;
 
@@ -47,7 +48,7 @@ pub async fn list(
 ) -> Result<Json<Vec<GasStationResponse>>, AppError> {
     let (south, west, north, east) = bbox_from_center(q.lat, q.lng);
 
-    let from_db = gas_station::Entity::find()
+    let from_db = match gas_station::Entity::find()
         .filter(gas_station::Column::Lat.gte(south))
         .filter(gas_station::Column::Lat.lte(north))
         .filter(gas_station::Column::Lng.gte(west))
@@ -55,7 +56,13 @@ pub async fn list(
         .limit(MAX_STATIONS)
         .all(&state.db)
         .await
-        .map_err(|_| AppError::Internal)?;
+    {
+        Ok(rows) => rows,
+        Err(e) => {
+            tracing::error!("gas-stations list failed (run migrations?): {}", e);
+            return Ok(Json(vec![]));
+        }
+    };
 
     let stations = from_db
         .into_iter()
