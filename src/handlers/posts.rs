@@ -138,13 +138,13 @@ pub async fn create(
         let ext = "jpg";
         let filename = format!("{}.{}", id, ext);
         let file_path = posts_dir.join(&filename);
-        let mut file = fs::File::create(&file_path)
+        let mut file = fs::File::create(&file_path).await.map_err(|e| {
+            tracing::error!("Failed to create file: {}", e);
+            AppError::Internal
+        })?;
+        file.write_all(&data)
             .await
-            .map_err(|e| {
-                tracing::error!("Failed to create file: {}", e);
-                AppError::Internal
-            })?;
-        file.write_all(&data).await.map_err(|_| AppError::Internal)?;
+            .map_err(|_| AppError::Internal)?;
         file.sync_all().await.map_err(|_| AppError::Internal)?;
 
         Some(format!("posts/{}", filename))
@@ -163,7 +163,10 @@ pub async fn create(
         ..Default::default()
     };
 
-    model.insert(&state.db).await.map_err(|_| AppError::Internal)?;
+    model
+        .insert(&state.db)
+        .await
+        .map_err(|_| AppError::Internal)?;
 
     let author = user::Entity::find_by_id(auth.id)
         .one(&state.db)
@@ -203,12 +206,10 @@ pub async fn serve_image(
         .ok_or_else(|| AppError::NotFound("Post has no image".into()))?;
 
     let full_path = state.config.upload_dir.join(path);
-    let content = fs::read(&full_path)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to read image: {}", e);
-            AppError::NotFound("Image not found".into())
-        })?;
+    let content = fs::read(&full_path).await.map_err(|e| {
+        tracing::error!("Failed to read image: {}", e);
+        AppError::NotFound("Image not found".into())
+    })?;
 
     Ok((
         StatusCode::OK,

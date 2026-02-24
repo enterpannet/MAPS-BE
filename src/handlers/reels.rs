@@ -42,7 +42,12 @@ pub async fn list(
         .await
         .map_err(|_| AppError::Internal)?;
 
-    let user_ids: Vec<Uuid> = reels.iter().map(|r| r.user_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
+    let user_ids: Vec<Uuid> = reels
+        .iter()
+        .map(|r| r.user_id)
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
     let users_map: std::collections::HashMap<Uuid, user::Model> = if user_ids.is_empty() {
         std::collections::HashMap::new()
     } else {
@@ -122,13 +127,13 @@ pub async fn upload(
     let ext = "mp4";
     let filename = format!("{}.{}", id, ext);
     let file_path = reels_dir.join(&filename);
-    let mut file = fs::File::create(&file_path)
+    let mut file = fs::File::create(&file_path).await.map_err(|e| {
+        tracing::error!("Failed to create file: {}", e);
+        AppError::Internal
+    })?;
+    file.write_all(&video_data)
         .await
-        .map_err(|e| {
-            tracing::error!("Failed to create file: {}", e);
-            AppError::Internal
-        })?;
-    file.write_all(&video_data).await.map_err(|_| AppError::Internal)?;
+        .map_err(|_| AppError::Internal)?;
     file.sync_all().await.map_err(|_| AppError::Internal)?;
 
     let relative_path = format!("reels/{}", filename);
@@ -146,7 +151,10 @@ pub async fn upload(
         ..Default::default()
     };
 
-    model.insert(&state.db).await.map_err(|_| AppError::Internal)?;
+    model
+        .insert(&state.db)
+        .await
+        .map_err(|_| AppError::Internal)?;
 
     let u = user::Entity::find_by_id(auth.id)
         .one(&state.db)
@@ -181,19 +189,14 @@ pub async fn serve_video(
         .ok_or_else(|| AppError::NotFound("Reel not found".into()))?;
 
     let full_path = state.config.upload_dir.join(&r.video_path);
-    let content = fs::read(&full_path)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to read video file: {}", e);
-            AppError::NotFound("Video file not found".into())
-        })?;
+    let content = fs::read(&full_path).await.map_err(|e| {
+        tracing::error!("Failed to read video file: {}", e);
+        AppError::NotFound("Video file not found".into())
+    })?;
 
     Ok((
         StatusCode::OK,
-        [(
-            header::CONTENT_TYPE,
-            "video/mp4",
-        )],
+        [(header::CONTENT_TYPE, "video/mp4")],
         axum::body::Body::from(content),
     )
         .into_response())
