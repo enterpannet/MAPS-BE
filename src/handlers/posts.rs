@@ -6,7 +6,7 @@ use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use sea_orm::{ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
@@ -135,6 +135,13 @@ pub async fn create(
             .await
             .map_err(|_| AppError::Internal)?;
 
+        let data_clone = data.clone();
+        let compressed =
+            tokio::task::spawn_blocking(move || crate::media::compress_image(&data_clone))
+                .await
+                .ok()
+                .and_then(|r| r.ok())
+                .unwrap_or(data);
         let ext = "jpg";
         let filename = format!("{}.{}", id, ext);
         let file_path = posts_dir.join(&filename);
@@ -142,7 +149,7 @@ pub async fn create(
             tracing::error!("Failed to create file: {}", e);
             AppError::Internal
         })?;
-        file.write_all(&data)
+        file.write_all(&compressed)
             .await
             .map_err(|_| AppError::Internal)?;
         file.sync_all().await.map_err(|_| AppError::Internal)?;

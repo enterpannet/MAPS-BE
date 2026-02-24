@@ -135,6 +135,9 @@ pub async fn upload(
         .await
         .map_err(|_| AppError::Internal)?;
     file.sync_all().await.map_err(|_| AppError::Internal)?;
+    drop(file);
+
+    let _ = crate::media::compress_video(&file_path).await;
 
     let relative_path = format!("reels/{}", filename);
 

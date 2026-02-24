@@ -48,4 +48,9 @@ Workflow จะ:
 ## 6. Posts (โพสต์แบบ Facebook)
 
 - Migration `011_posts.sql` จะรันอัตโนมัติ
-- รูปภาพเก็บที่ `./uploads/posts/`
+- รูปภาพเก็บที่ `./uploads/posts/` (ย่อและบีบอัดอัตโนมัติ)
+
+## 7. Media Compression
+
+- **รูปภาพ**: ย่อเป็น max 1920px, บีบอัด JPEG quality 88 (คุณภาพสูง)
+- **วิดีโอ**: ใช้ ffmpeg บีบอัด H.264 CRF 23, max 1080p — ต้องติดตั้ง `ffmpeg` บน server

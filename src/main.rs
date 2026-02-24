@@ -3,6 +3,7 @@ mod db;
 mod error;
 mod handlers;
 mod jobs;
+mod media;
 mod middleware;
 mod migrate;
 mod models;
