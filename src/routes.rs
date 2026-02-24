@@ -1,4 +1,7 @@
-use axum::{routing::{delete, get, post}, Router};
+use axum::{
+    routing::{delete, get, post},
+    Router,
+};
 
 use crate::handlers::{fuel, gas_stations, location, rooms, trips, waypoints};
 use crate::AppState;
