@@ -6,6 +6,7 @@ pub struct Config {
     pub redis_url: String,
     pub jwt_secret: String,
     pub port: u16,
+    pub upload_dir: std::path::PathBuf,
     pub nrel_api_key: Option<String>,
     pub ocm_api_key: Option<String>,
     pub tankerkoenig_api_key: Option<String>,
@@ -24,6 +25,9 @@ impl Config {
                 .ok()
                 .and_then(|p| p.parse().ok())
                 .unwrap_or(3001),
+            upload_dir: std::env::var("UPLOAD_DIR")
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(|_| std::path::PathBuf::from("./uploads")),
             nrel_api_key: std::env::var("NREL_API_KEY").ok(),
             ocm_api_key: std::env::var("OCM_API_KEY").ok(),
             tankerkoenig_api_key: std::env::var("TANKERKOENIG_API_KEY").ok(),

@@ -35,6 +35,9 @@ target/
 skills/
 skills-lock.json
 
+# Uploads (videos)
+uploads/
+
 # Env
 .env
 .env.local

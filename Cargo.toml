@@ -9,7 +9,7 @@ path = "src/bin/fix_migration_checksums.rs"
 
 [dependencies]
 # Web framework
-axum = { version = "0.7", features = ["json", "ws", "macros"] }
+axum = { version = "0.7", features = ["json", "ws", "macros", "multipart"] }
 tokio = { version = "1", features = ["full"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors"] }

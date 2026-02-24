@@ -38,3 +38,14 @@ Workflow จะ:
 - Copy binary
 - Copy และติดตั้ง `maps-backend.service`
 - รีสตาร์ท service
+
+## 5. Reels (วิดีโอสั้น)
+
+- Migration `010_reels.sql` จะรันอัตโนมัติ
+- วิดีโอเก็บที่ `./uploads/reels/` (หรือ `UPLOAD_DIR` ใน .env)
+- Nginx ต้องมี `client_max_body_size 100M` สำหรับอัปโหลดวิดีโอ
+
+## 6. Posts (โพสต์แบบ Facebook)
+
+- Migration `011_posts.sql` จะรันอัตโนมัติ
+- รูปภาพเก็บที่ `./uploads/posts/`
