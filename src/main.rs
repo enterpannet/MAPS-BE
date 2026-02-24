@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let app = Router::new()
-        .route("/health", axum::routing::get(|| async { "ok" }))
+        .route("/health", axum::routing::get(|| async { axum::Json(serde_json::json!({"service":"maps-backend","status":"ok"})) }))
         .merge(routes::api())
         .layer(
             CorsLayer::new()
