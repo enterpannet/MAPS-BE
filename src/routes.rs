@@ -16,6 +16,7 @@ pub fn api() -> Router<AppState> {
     let posts_routes = Router::new()
         .route("/api/posts", get(posts::list).post(posts::create))
         .route("/api/posts/:id/image", get(posts::serve_image))
+        .route("/api/posts/:id/comments", post(posts::create_comment))
         .layer(DefaultBodyLimit::max(10 * 1024 * 1024)); // 10MB for image
 
     Router::new()

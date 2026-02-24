@@ -47,8 +47,9 @@ Workflow จะ:
 
 ## 6. Posts (โพสต์แบบ Facebook)
 
-- Migration `011_posts.sql` จะรันอัตโนมัติ
+- Migration `011_posts.sql`, `012_post_comments.sql` จะรันอัตโนมัติ
 - รูปภาพเก็บที่ `./uploads/posts/` (ย่อและบีบอัดอัตโนมัติ)
+- ผู้ใช้สามารถคอมเมนต์ได้
 
 ## 7. Media Compression
 
