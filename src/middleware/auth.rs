@@ -1,4 +1,3 @@
-use crate::error::AppError;
 use crate::services::auth;
 use axum::{
     async_trait,

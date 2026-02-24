@@ -21,9 +21,8 @@ sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "postgres"] }
 # Redis
 redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
 
-# Auth - JWT RS256 + Argon2
+# Auth - JWT validation only (register/login in auth-service)
 jsonwebtoken = "9.2"
-argon2 = "0.5"
 uuid = { version = "1", features = ["v4", "serde"] }
 
 # Serialization

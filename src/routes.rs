@@ -1,18 +1,10 @@
-use axum::{
-    routing::{delete, get, patch, post},
-    Router,
-};
-use tower_http::cors::CorsLayer;
+use axum::{routing::{delete, get, post}, Router};
 
-use crate::handlers::{auth, fuel, gas_stations, location, rooms, trips, waypoints};
-use crate::middleware::auth::AuthUser;
+use crate::handlers::{fuel, gas_stations, location, rooms, trips, waypoints};
 use crate::AppState;
 
 pub fn api() -> Router<AppState> {
     Router::new()
-        .route("/api/auth/register", post(auth::register))
-        .route("/api/auth/login", post(auth::login))
-        .route("/api/users/me", patch(auth::update_profile))
         .route("/api/rooms", get(rooms::list_my_rooms).post(rooms::create))
         .route("/api/rooms/join", post(rooms::join_by_code))
         .route("/api/locations", post(location::report))
