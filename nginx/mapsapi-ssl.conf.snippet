@@ -1,20 +1,16 @@
-# Nginx config for mapsapi.mostdata.site (Backend API + Auth Service)
-# Auth service: port 3002, Main API: port 3001
-#
-# SSL: sudo certbot certonly --webroot -w /var/www/html -d mapsapi.mostdata.site
-# Certbot may add ssl_* directives - ensure BOTH server blocks have /api/auth/ and /api/users/
+# ใช้เมื่อมี SSL cert แล้ว - include ใน server block หรือเพิ่ม server block นี้
+# หลัง certbot: sudo ln -sf /etc/nginx/snippets/mapsapi-ssl.conf.snippet /etc/nginx/snippets/mapsapi-ssl.conf
+# แล้ว include ใน mapsapi.mostdata.site.conf
 
-# HTTP
 server {
-    listen 80;
-    listen [::]:80;
+    listen 443 ssl;
+    listen [::]:443 ssl;
     server_name mapsapi.mostdata.site;
 
-    location ^~ /.well-known/acme-challenge/ {
-        default_type "text/plain";
-        root /var/www/html;
-        allow all;
-    }
+    ssl_certificate /etc/letsencrypt/live/mapsapi.mostdata.site/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/mapsapi.mostdata.site/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     location /api/auth/ {
         proxy_pass http://127.0.0.1:3002;
@@ -46,6 +42,3 @@ server {
         proxy_read_timeout 86400;
     }
 }
-
-# HTTPS: หลังได้ cert แล้ว ให้เพิ่ม server block สำหรับ 443
-# ดู mapsapi-ssl.conf.snippet หรือรัน: sudo certbot --nginx -d mapsapi.mostdata.site
