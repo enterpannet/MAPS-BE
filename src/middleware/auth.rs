@@ -35,6 +35,7 @@ where
             id,
             email: String::new(),
             display_name: None,
+            role: claims.role.clone(),
         }))
     }
 }

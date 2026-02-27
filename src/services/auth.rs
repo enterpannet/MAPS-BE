@@ -8,6 +8,12 @@ pub struct Claims {
     pub sub: String,
     pub exp: i64,
     pub iat: i64,
+    #[serde(default = "default_role")]
+    pub role: String,
+}
+
+fn default_role() -> String {
+    "member".into()
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -15,6 +21,7 @@ pub struct AuthUser {
     pub id: Uuid,
     pub email: String,
     pub display_name: Option<String>,
+    pub role: String,
 }
 
 pub fn decode_token(token: &str, secret: &str) -> Result<Claims, AppError> {

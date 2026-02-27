@@ -10,6 +10,7 @@ pub struct Model {
     #[serde(skip_serializing)]
     pub password_hash: String,
     pub display_name: Option<String>,
+    pub role: String,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
 }
