@@ -2,6 +2,7 @@
 name = "maps-backend"
 version = "0.1.0"
 edition = "2021"
+default-run = "maps-backend"
 
 [[bin]]
 name = "fix_migration_checksums"
