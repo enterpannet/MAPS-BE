@@ -45,11 +45,10 @@ async fn ensure_migrations_table(pool: &PgPool) -> anyhow::Result<()> {
 }
 
 async fn applied(pool: &PgPool, version: i64) -> anyhow::Result<bool> {
-    let opt: Option<(i64,)> =
-        sqlx::query_as("SELECT 1 FROM _app_migrations WHERE version = $1")
-            .bind(version)
-            .fetch_optional(pool)
-            .await?;
+    let opt: Option<(i64,)> = sqlx::query_as("SELECT 1 FROM _app_migrations WHERE version = $1")
+        .bind(version)
+        .fetch_optional(pool)
+        .await?;
     Ok(opt.is_some())
 }
 

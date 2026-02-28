@@ -22,7 +22,10 @@ fn main() {
     for (idx, entry) in entries.iter().enumerate() {
         let name: String = entry.file_name().to_string_lossy().into_owned();
         let version = (idx + 1) as i64;
-        let base = name.strip_suffix(".sql").map(|s| s.to_string()).unwrap_or(name);
+        let base = name
+            .strip_suffix(".sql")
+            .map(|s| s.to_string())
+            .unwrap_or(name);
         let content = fs::read_to_string(entry.path()).unwrap_or_default();
         let escaped = escape_rust_str(&content);
         parts.push(format!("({}, \"{}\", \"{}\")", version, base, escaped));
