@@ -16,7 +16,7 @@ pub struct GenerateRequest {
     pub mode: GenerateMode,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum GenerateMode {
     #[default]
