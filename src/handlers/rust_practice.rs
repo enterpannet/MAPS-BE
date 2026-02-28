@@ -197,11 +197,7 @@ async fn call_gemini(
 }
 
 /// Kilo.ai (OpenAI-compatible) chat completion
-async fn call_kilo(
-    prompt: &str,
-    api_key: &str,
-    model: &str,
-) -> Result<String, AppError> {
+async fn call_kilo(prompt: &str, api_key: &str, model: &str) -> Result<String, AppError> {
     let key = api_key.trim();
     if key.is_empty() {
         return Err(AppError::BadRequest(
@@ -281,7 +277,9 @@ pub async fn generate(
         let key = get_header(&headers, "x-ai-api-key")
             .or_else(|| get_header(&headers, "x-kilo-api-key"))
             .ok_or_else(|| {
-                AppError::BadRequest("เมื่อใช้ Kilo กรุณากรอก API Key ในหน้าตั้งค่า (AI Provider = Kilo)".into())
+                AppError::BadRequest(
+                    "เมื่อใช้ Kilo กรุณากรอก API Key ในหน้าตั้งค่า (AI Provider = Kilo)".into(),
+                )
             })?;
         let model = get_header(&headers, "x-ai-model").unwrap_or_else(|| KILO_MODEL_DEFAULT.into());
         call_kilo(&prompt, &key, &model).await?
