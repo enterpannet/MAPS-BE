@@ -160,7 +160,10 @@ async fn call_gemini(
         }
     });
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(120))
+        .build()
+        .map_err(|_| AppError::Internal)?;
     let res = client.post(&url).json(&body).send().await.map_err(|e| {
         tracing::error!("Gemini request failed: {}", e);
         AppError::Internal
@@ -213,7 +216,11 @@ async fn call_kilo(prompt: &str, api_key: &str, model: &str) -> Result<String, A
         "temperature": 0.35
     });
 
-    let res = reqwest::Client::new()
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(120))
+        .build()
+        .map_err(|_| AppError::Internal)?;
+    let res = client
         .post(KILO_CHAT_URL)
         .header("Authorization", format!("Bearer {}", key))
         .json(&body)
@@ -305,7 +312,10 @@ pub async fn generate(
         GenerateMode::Study => {
             let step1: Step1Payload = serde_json::from_str(raw_clean).map_err(|e| {
                 tracing::warn!("AI study JSON parse error: {} raw: {}", e, raw_clean);
-                AppError::BadRequest(format!("ไม่สามารถ parse คำตอบจาก AI: {}", e))
+                AppError::BadRequest(format!(
+                    "ไม่สามารถ parse คำตอบจาก AI: {} (คำตอบอาจถูกตัดกลางทาง ลองกดสร้างใหม่อีกครั้ง)",
+                    e
+                ))
             })?;
             Ok(Json(GenerateResponse {
                 ok: true,
@@ -319,7 +329,10 @@ pub async fn generate(
         GenerateMode::Full => {
             let full: FullPayload = serde_json::from_str(raw_clean).map_err(|e| {
                 tracing::warn!("AI full JSON parse error: {} raw: {}", e, raw_clean);
-                AppError::BadRequest(format!("ไม่สามารถ parse คำตอบจาก AI: {}", e))
+                AppError::BadRequest(format!(
+                    "ไม่สามารถ parse คำตอบจาก AI: {} (คำตอบอาจถูกตัดกลางทาง ลองกดสร้างใหม่อีกครั้ง หรือเลือกโหมด Study เพื่อสร้างเฉพาะขั้นที่ 1)",
+                    e
+                ))
             })?;
             Ok(Json(GenerateResponse {
                 ok: true,
