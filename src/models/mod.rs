@@ -6,6 +6,7 @@ pub mod post_comment;
 pub mod reel;
 pub mod room;
 pub mod room_member;
+pub mod rust_practice_topic;
 pub mod trip;
 pub mod user;
 pub mod waypoint;

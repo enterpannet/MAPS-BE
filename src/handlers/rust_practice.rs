@@ -1,17 +1,21 @@
-//! สร้างโจทย์และข้อมูลศึกษา Rust ด้วย Gemini API
+//! สร้างโจทย์และข้อมูลศึกษา Rust ด้วย Gemini API + บันทึก/โหลดจาก DB
 
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::Json;
+use sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait, QueryOrder};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-use crate::config::Config;
 use crate::error::AppError;
+use crate::middleware::auth::AuthUser;
+use crate::models::rust_practice_topic;
+use crate::AppState;
+
+// ─── Gemini generate ──────────────────────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
 pub struct GenerateRequest {
-    /// หัวข้อหรือแนวคิดที่ต้องการ (เช่น "Option and Result", "struct")
     pub topic: String,
-    /// full = สร้างทั้ง 4 ขั้น, study = สร้างเฉพาะข้อมูลอ่านศึกษา
     #[serde(default)]
     pub mode: GenerateMode,
 }
@@ -111,7 +115,7 @@ fn build_prompt(topic: &str, mode: GenerateMode) -> String {
     }
 }
 
-async fn call_gemini(config: &Config, prompt: &str) -> Result<String, AppError> {
+async fn call_gemini(config: &crate::config::Config, prompt: &str) -> Result<String, AppError> {
     let key = config
         .gemini_api_key
         .as_deref()
@@ -155,7 +159,8 @@ async fn call_gemini(config: &Config, prompt: &str) -> Result<String, AppError> 
 }
 
 pub async fn generate(
-    State(state): State<crate::AppState>,
+    State(state): State<AppState>,
+    AuthUser(_auth): AuthUser,
     Json(req): Json<GenerateRequest>,
 ) -> Result<Json<GenerateResponse>, AppError> {
     if req.topic.trim().is_empty() {
@@ -210,4 +215,135 @@ struct FullPayload {
     step2: Step2Payload,
     step3: Step3Payload,
     step4: Step4Payload,
+}
+
+// ─── Topic CRUD ───────────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct TopicResponse {
+    pub id: String,
+    pub title: String,
+    pub s1_title: String,
+    pub s1_content: String,
+    pub s1_code: Option<String>,
+    pub s2_title: String,
+    pub s2_description: String,
+    pub s2_code: String,
+    pub s3_title: String,
+    pub s3_description: String,
+    pub s3_code_with_blanks: String,
+    pub s3_solution: String,
+    pub s4_title: String,
+    pub s4_task: String,
+    pub s4_hint: Option<String>,
+    pub s4_solution: String,
+    pub created_at: String,
+}
+
+fn model_to_response(m: rust_practice_topic::Model) -> TopicResponse {
+    TopicResponse {
+        id: m.id.to_string(),
+        title: m.title,
+        s1_title: m.s1_title,
+        s1_content: m.s1_content,
+        s1_code: m.s1_code,
+        s2_title: m.s2_title,
+        s2_description: m.s2_description,
+        s2_code: m.s2_code,
+        s3_title: m.s3_title,
+        s3_description: m.s3_description,
+        s3_code_with_blanks: m.s3_code_with_blanks,
+        s3_solution: m.s3_solution,
+        s4_title: m.s4_title,
+        s4_task: m.s4_task,
+        s4_hint: m.s4_hint,
+        s4_solution: m.s4_solution,
+        created_at: m.created_at.to_rfc3339(),
+    }
+}
+
+/// GET /api/rust-practice/topics — โหลดหัวข้อทั้งหมดจาก DB
+pub async fn list_topics(
+    State(state): State<AppState>,
+    AuthUser(_auth): AuthUser,
+) -> Result<Json<Vec<TopicResponse>>, AppError> {
+    let topics = rust_practice_topic::Entity::find()
+        .order_by_asc(rust_practice_topic::Column::CreatedAt)
+        .all(&state.db)
+        .await
+        .map_err(|_| AppError::Internal)?;
+
+    Ok(Json(topics.into_iter().map(model_to_response).collect()))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SaveTopicRequest {
+    pub title: String,
+    pub step1: Step1Payload,
+    pub step2: Step2Payload,
+    pub step3: Step3Payload,
+    pub step4: Step4Payload,
+}
+
+/// POST /api/rust-practice/topics — บันทึกหัวข้อที่สร้างจาก Gemini ลง DB (admin)
+pub async fn save_topic(
+    State(state): State<AppState>,
+    AuthUser(auth): AuthUser,
+    Json(req): Json<SaveTopicRequest>,
+) -> Result<Json<TopicResponse>, AppError> {
+    if auth.role != "admin" {
+        return Err(AppError::Forbidden);
+    }
+    if req.title.trim().is_empty() {
+        return Err(AppError::BadRequest("title ต้องไม่ว่าง".into()));
+    }
+
+    let now = chrono::Utc::now();
+    let record = rust_practice_topic::ActiveModel {
+        id: ActiveValue::Set(Uuid::new_v4()),
+        title: ActiveValue::Set(req.title.trim().to_string()),
+        s1_title: ActiveValue::Set(req.step1.title),
+        s1_content: ActiveValue::Set(req.step1.content),
+        s1_code: ActiveValue::Set(req.step1.code),
+        s2_title: ActiveValue::Set(req.step2.title),
+        s2_description: ActiveValue::Set(req.step2.description),
+        s2_code: ActiveValue::Set(req.step2.code),
+        s3_title: ActiveValue::Set(req.step3.title),
+        s3_description: ActiveValue::Set(req.step3.description),
+        s3_code_with_blanks: ActiveValue::Set(req.step3.code_with_blanks),
+        s3_solution: ActiveValue::Set(req.step3.solution),
+        s4_title: ActiveValue::Set(req.step4.title),
+        s4_task: ActiveValue::Set(req.step4.task),
+        s4_hint: ActiveValue::Set(req.step4.hint),
+        s4_solution: ActiveValue::Set(req.step4.solution),
+        created_at: ActiveValue::Set(now.into()),
+    };
+
+    let saved = record
+        .insert(&state.db)
+        .await
+        .map_err(|_| AppError::Internal)?;
+
+    Ok(Json(model_to_response(saved)))
+}
+
+/// DELETE /api/rust-practice/topics/:id — ลบหัวข้อ (admin)
+pub async fn delete_topic(
+    State(state): State<AppState>,
+    AuthUser(auth): AuthUser,
+    Path(topic_id): Path<String>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    if auth.role != "admin" {
+        return Err(AppError::Forbidden);
+    }
+
+    let id = Uuid::parse_str(&topic_id)
+        .map_err(|_| AppError::BadRequest("Invalid topic id".into()))?;
+
+    rust_practice_topic::Entity::delete_by_id(id)
+        .exec(&state.db)
+        .await
+        .map_err(|_| AppError::Internal)?;
+
+    Ok(Json(serde_json::json!({ "ok": true })))
 }

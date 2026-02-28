@@ -56,8 +56,16 @@ pub fn api() -> Router<AppState> {
             "/api/admin/users/:id/role",
             patch(admin::update_role_handler),
         )
-        // Misc
+        // Rust Practice
         .route("/api/rust-practice/generate", post(rust_practice::generate))
+        .route(
+            "/api/rust-practice/topics",
+            get(rust_practice::list_topics).post(rust_practice::save_topic),
+        )
+        .route(
+            "/api/rust-practice/topics/:id",
+            delete(rust_practice::delete_topic),
+        )
         .route("/api/ws/:room_id", get(crate::ws::handler))
         .merge(reels_routes)
         .merge(posts_routes)
