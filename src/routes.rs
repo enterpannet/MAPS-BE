@@ -4,7 +4,7 @@ use axum::{
     Router,
 };
 
-use crate::handlers::{fuel, gas_stations, location, posts, reels, rooms, trips, waypoints};
+use crate::handlers::{fuel, gas_stations, location, posts, reels, rooms, rust_practice, trips, waypoints};
 use crate::AppState;
 
 pub fn api() -> Router<AppState> {
@@ -40,6 +40,7 @@ pub fn api() -> Router<AppState> {
         .route("/api/rooms/:room_id/fuel", get(fuel::list))
         .route("/api/fuel", get(fuel::list_all))
         .route("/api/gas-stations", get(gas_stations::list))
+        .route("/api/rust-practice/generate", post(rust_practice::generate))
         .route("/api/ws/:room_id", get(crate::ws::handler))
         .merge(reels_routes)
         .merge(posts_routes)

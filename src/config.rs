@@ -10,6 +10,7 @@ pub struct Config {
     pub nrel_api_key: Option<String>,
     pub ocm_api_key: Option<String>,
     pub tankerkoenig_api_key: Option<String>,
+    pub gemini_api_key: Option<String>,
 }
 
 impl Config {
@@ -31,6 +32,7 @@ impl Config {
             nrel_api_key: std::env::var("NREL_API_KEY").ok(),
             ocm_api_key: std::env::var("OCM_API_KEY").ok(),
             tankerkoenig_api_key: std::env::var("TANKERKOENIG_API_KEY").ok(),
+            gemini_api_key: std::env::var("GEMINI_API_KEY").ok(),
         })
     }
 }

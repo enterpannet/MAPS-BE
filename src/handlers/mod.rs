@@ -4,5 +4,6 @@ pub mod location;
 pub mod posts;
 pub mod reels;
 pub mod rooms;
+pub mod rust_practice;
 pub mod trips;
 pub mod waypoints;
