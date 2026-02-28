@@ -33,7 +33,7 @@ async fn ensure_migrations_table(pool: &PgPool) -> anyhow::Result<()> {
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS _app_migrations (
-            version BIGINT PRIMARY KEY,
+            version INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
             applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
@@ -44,15 +44,15 @@ async fn ensure_migrations_table(pool: &PgPool) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn applied(pool: &PgPool, version: i64) -> anyhow::Result<bool> {
-    let opt: Option<(i64,)> = sqlx::query_as("SELECT 1 FROM _app_migrations WHERE version = $1")
+async fn applied(pool: &PgPool, version: i32) -> anyhow::Result<bool> {
+    let opt: Option<(i32,)> = sqlx::query_as("SELECT 1 FROM _app_migrations WHERE version = $1")
         .bind(version)
         .fetch_optional(pool)
         .await?;
     Ok(opt.is_some())
 }
 
-async fn record_applied(pool: &PgPool, version: i64, name: &str) -> anyhow::Result<()> {
+async fn record_applied(pool: &PgPool, version: i32, name: &str) -> anyhow::Result<()> {
     sqlx::query("INSERT INTO _app_migrations (version, name) VALUES ($1, $2)")
         .bind(version)
         .bind(name)

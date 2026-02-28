@@ -55,3 +55,30 @@ Workflow จะ:
 
 - **รูปภาพ**: ย่อเป็น max 1920px, บีบอัด JPEG quality 88 (คุณภาพสูง)
 - **วิดีโอ**: ใช้ ffmpeg บีบอัด H.264 CRF 23, max 1080p — ต้องติดตั้ง `ffmpeg` บน server
+
+## 8. แก้ 502 Bad Gateway
+
+เมื่อ frontend (mapsui.mostdata.site) เรียก `/api/rooms` แล้วได้ **502 Bad Gateway** แปลว่า Nginx ไม่ได้คำตอบจาก backend (mapsapi.mostdata.site หรือ 127.0.0.1:3001)
+
+**บนเครื่องที่รัน backend (mapsapi หรือเครื่องที่รัน maps-backend):**
+
+```bash
+# 1. ดูว่า service รันอยู่ไหม
+sudo systemctl status maps-backend
+# ถ้า inactive: sudo systemctl start maps-backend
+
+# 2. ตรวจ health
+curl -s http://127.0.0.1:3001/health
+# ควรได้ {"service":"maps-backend","status":"ok"}
+
+# 3. ถ้า frontend อยู่คนละเครื่อง และ /api/ proxy ไป mapsapi — ตรวจบนเครื่อง mapsapi
+curl -s https://mapsapi.mostdata.site/health
+```
+
+**สาเหตุที่พบบ่อย**
+
+- Backend crash หรือยังไม่สตาร์ท → `sudo systemctl start maps-backend` และดู log: `journalctl -u maps-backend -n 50`
+- Migration ล้มเหลวตอนสตาร์ท → ดู log แล้วแก้ DB / รัน migration ให้ผ่าน
+- พอร์ต 3001 ถูก firewall หรือ process อื่นใช้อยู่ → ตรวจ `ss -tlnp | grep 3001`
+
+สคริปต์ตรวจทั้ง backend และ auth (ถ้ามี): `./deploy/check-health.sh`
