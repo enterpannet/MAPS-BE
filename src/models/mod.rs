@@ -1,5 +1,4 @@
 pub mod fuel_record;
-pub mod gas_station;
 pub mod location;
 pub mod post;
 pub mod post_comment;

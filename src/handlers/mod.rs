@@ -1,6 +1,5 @@
 pub mod admin;
 pub mod fuel;
-pub mod gas_stations;
 pub mod geocode;
 pub mod location;
 pub mod posts;

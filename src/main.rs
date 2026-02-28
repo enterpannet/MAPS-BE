@@ -2,7 +2,6 @@ mod config;
 mod db;
 mod error;
 mod handlers;
-mod jobs;
 mod media;
 mod middleware;
 mod migrate;
@@ -49,8 +48,6 @@ async fn main() -> anyhow::Result<()> {
             config: config.clone(),
             rooms: Arc::new(RwLock::new(HashMap::new())),
         });
-
-    jobs::gas_station_sync::spawn_scheduler(db.clone());
 
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
     tracing::info!("Server listening on http://{}", addr);

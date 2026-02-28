@@ -5,8 +5,7 @@ use axum::{
 };
 
 use crate::handlers::{
-    admin, fuel, gas_stations, geocode, location, posts, reels, rooms, rust_practice, trips,
-    waypoints,
+    admin, fuel, geocode, location, posts, reels, rooms, rust_practice, trips, waypoints,
 };
 use crate::AppState;
 
@@ -46,8 +45,6 @@ pub fn api() -> Router<AppState> {
         .route("/api/rooms/:room_id/fuel", post(fuel::create))
         .route("/api/rooms/:room_id/fuel", get(fuel::list))
         .route("/api/fuel", get(fuel::list_all))
-        // Gas stations
-        .route("/api/gas-stations", get(gas_stations::list))
         // Geocoding proxy (Nominatim + Redis cache)
         .route("/api/geocode/search", get(geocode::search))
         // Admin — user management
