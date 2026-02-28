@@ -316,15 +316,12 @@ pub struct SaveTopicRequest {
     pub step4: Step4Payload,
 }
 
-/// POST /api/rust-practice/topics — บันทึกหัวข้อที่สร้างจาก Gemini ลง DB (admin)
+/// POST /api/rust-practice/topics — บันทึกหัวข้อที่สร้างจาก Gemini ลง DB (ผู้ใช้ที่ล็อกอินแล้ว)
 pub async fn save_topic(
     State(state): State<AppState>,
-    AuthUser(auth): AuthUser,
+    AuthUser(_auth): AuthUser,
     Json(req): Json<SaveTopicRequest>,
 ) -> Result<Json<TopicResponse>, AppError> {
-    if auth.role != "admin" {
-        return Err(AppError::Forbidden);
-    }
     if req.title.trim().is_empty() {
         return Err(AppError::BadRequest("title ต้องไม่ว่าง".into()));
     }
