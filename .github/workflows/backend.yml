@@ -78,12 +78,14 @@ jobs:
           REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'change-me-in-production-32-chars' }}
           PORT: ${{ secrets.PORT || '3001' }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || '' }}
         run: |
           {
             echo "DATABASE_URL=$DATABASE_URL"
             echo "REDIS_URL=$REDIS_URL"
             echo "JWT_SECRET=$JWT_SECRET"
             echo "PORT=$PORT"
+            echo "GEMINI_API_KEY=$GEMINI_API_KEY"
           } > .env.deploy
 
       - name: Deploy to VPS
