@@ -55,7 +55,10 @@ pub fn api() -> Router<AppState> {
         )
         // Rust Practice
         .route("/api/rust-practice/generate", post(rust_practice::generate))
-        .route("/api/rust-practice/kilo-models", get(rust_practice::list_kilo_models))
+        .route(
+            "/api/rust-practice/kilo-models",
+            get(rust_practice::list_kilo_models),
+        )
         .route(
             "/api/rust-practice/topics",
             get(rust_practice::list_topics).post(rust_practice::save_topic),
