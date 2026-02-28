@@ -81,6 +81,7 @@ const GEMINI_BASE: &str = "https://generativelanguage.googleapis.com/v1beta/mode
 const GEMINI_MODEL_DEFAULT: &str = "gemini-2.0-flash";
 
 const KILO_CHAT_URL: &str = "https://api.kilo.ai/api/gateway/chat/completions";
+const KILO_MODELS_URL: &str = "https://api.kilo.ai/api/gateway/models";
 const KILO_MODEL_DEFAULT: &str = "anthropic/claude-sonnet-4";
 
 fn build_prompt(topic: &str, mode: GenerateMode) -> String {
@@ -330,6 +331,31 @@ pub async fn generate(
             }))
         }
     }
+}
+
+/// GET /api/rust-practice/kilo-models — โหลดรายการโมเดลจาก Kilo.ai (ไม่ต้องใช้ auth)
+pub async fn list_kilo_models() -> Result<Json<serde_json::Value>, AppError> {
+    let res = reqwest::Client::new()
+        .get(KILO_MODELS_URL)
+        .send()
+        .await
+        .map_err(|e| {
+            tracing::error!("Kilo models request failed: {}", e);
+            AppError::Internal
+        })?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let text = res.text().await.unwrap_or_default();
+        tracing::error!("Kilo models API error {}: {}", status, text);
+        return Err(AppError::BadRequest(format!(
+            "โหลดรายการโมเดล Kilo ไม่ได้: {}",
+            status
+        )));
+    }
+
+    let json: serde_json::Value = res.json().await.map_err(|_| AppError::Internal)?;
+    Ok(Json(json))
 }
 
 #[derive(Debug, Deserialize)]
