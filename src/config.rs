@@ -11,6 +11,8 @@ pub struct Config {
     pub ocm_api_key: Option<String>,
     pub tankerkoenig_api_key: Option<String>,
     pub gemini_api_key: Option<String>,
+    /// ชื่อโมเดล Gemini เช่น gemini-2.0-flash (default)
+    pub gemini_model: Option<String>,
 }
 
 impl Config {
@@ -33,6 +35,7 @@ impl Config {
             ocm_api_key: std::env::var("OCM_API_KEY").ok(),
             tankerkoenig_api_key: std::env::var("TANKERKOENIG_API_KEY").ok(),
             gemini_api_key: std::env::var("GEMINI_API_KEY").ok(),
+            gemini_model: std::env::var("GEMINI_MODEL").ok(),
         })
     }
 }

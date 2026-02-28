@@ -1,6 +1,7 @@
 //! สร้างโจทย์และข้อมูลศึกษา Rust ด้วย Gemini API + บันทึก/โหลดจาก DB
 
 use axum::extract::{Path, State};
+use axum::http::HeaderMap;
 use axum::Json;
 use sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait, QueryOrder};
 use serde::{Deserialize, Serialize};
@@ -76,8 +77,8 @@ pub struct Step4Payload {
     pub solution: String,
 }
 
-const GEMINI_URL: &str =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+const GEMINI_BASE: &str = "https://generativelanguage.googleapis.com/v1beta/models";
+const GEMINI_MODEL_DEFAULT: &str = "gemini-2.0-flash";
 
 fn build_prompt(topic: &str, mode: GenerateMode) -> String {
     let topic_esc = topic.trim();
@@ -115,13 +116,22 @@ fn build_prompt(topic: &str, mode: GenerateMode) -> String {
     }
 }
 
-async fn call_gemini(config: &crate::config::Config, prompt: &str) -> Result<String, AppError> {
-    let key = config
-        .gemini_api_key
-        .as_deref()
-        .ok_or_else(|| AppError::BadRequest("GEMINI_API_KEY ไม่ได้ตั้งค่า".into()))?;
+async fn call_gemini(
+    config: &crate::config::Config,
+    prompt: &str,
+    api_key_override: Option<&str>,
+    model_override: Option<&str>,
+) -> Result<String, AppError> {
+    let key = api_key_override
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| config.gemini_api_key.as_deref())
+        .ok_or_else(|| AppError::BadRequest("กรุณาตั้งค่า GEMINI_API_KEY ในเซิร์ฟเวอร์ หรือกรอก API Key ในหน้าตั้งค่า".into()))?;
 
-    let url = format!("{}?key={}", GEMINI_URL, key);
+    let model = model_override
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| config.gemini_model.as_deref())
+        .unwrap_or(GEMINI_MODEL_DEFAULT);
+    let url = format!("{}/{}:generateContent?key={}", GEMINI_BASE, model, key);
     let body = serde_json::json!({
         "contents": [{ "parts": [{ "text": prompt }] }],
         "generationConfig": {
@@ -140,7 +150,16 @@ async fn call_gemini(config: &crate::config::Config, prompt: &str) -> Result<Str
         let status = res.status();
         let text = res.text().await.unwrap_or_default();
         tracing::error!("Gemini API error {}: {}", status, text);
-        return Err(AppError::BadRequest(format!("Gemini API: {}", status)));
+        let msg = serde_json::from_str::<serde_json::Value>(&text)
+            .ok()
+            .and_then(|j| {
+                j.get("error")
+                    .and_then(|e| e.get("message"))
+                    .and_then(|m| m.as_str())
+                    .map(|s| s.to_string())
+            })
+            .unwrap_or_else(|| format!("Gemini API: {}", status));
+        return Err(AppError::BadRequest(msg));
     }
 
     let json: serde_json::Value = res.json().await.map_err(|_| AppError::Internal)?;
@@ -160,6 +179,7 @@ async fn call_gemini(config: &crate::config::Config, prompt: &str) -> Result<Str
 
 pub async fn generate(
     State(state): State<AppState>,
+    headers: HeaderMap,
     AuthUser(_auth): AuthUser,
     Json(req): Json<GenerateRequest>,
 ) -> Result<Json<GenerateResponse>, AppError> {
@@ -167,8 +187,15 @@ pub async fn generate(
         return Err(AppError::BadRequest("กรุณาระบุหัวข้อ (topic)".into()));
     }
 
+    let api_key_override = headers
+        .get("x-gemini-api-key")
+        .and_then(|v: &axum::http::HeaderValue| v.to_str().ok());
+    let model_override = headers
+        .get("x-gemini-model")
+        .and_then(|v: &axum::http::HeaderValue| v.to_str().ok());
+
     let prompt = build_prompt(req.topic.trim(), req.mode);
-    let raw = call_gemini(&state.config, &prompt).await?;
+    let raw = call_gemini(&state.config, &prompt, api_key_override, model_override).await?;
 
     let raw_clean = raw
         .trim()
