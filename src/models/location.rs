@@ -11,6 +11,10 @@ pub struct Model {
     pub lat: f64,
     pub lng: f64,
     pub accuracy: Option<f32>,
+    /// Speed in km/h (from device GPS)
+    pub speed: Option<f32>,
+    /// Heading in degrees 0–360 from North, clockwise
+    pub heading: Option<f32>,
     pub created_at: DateTimeWithTimeZone,
 }
 

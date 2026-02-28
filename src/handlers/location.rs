@@ -17,6 +17,10 @@ pub struct ReportLocationRequest {
     pub lat: f64,
     pub lng: f64,
     pub accuracy: Option<f32>,
+    /// Speed in km/h (optional, from device GPS)
+    pub speed: Option<f32>,
+    /// Heading in degrees 0–360 from North, clockwise (optional)
+    pub heading: Option<f32>,
 }
 
 #[derive(Serialize)]
@@ -27,6 +31,8 @@ pub struct LocationResponse {
     pub lat: f64,
     pub lng: f64,
     pub accuracy: Option<f32>,
+    pub speed: Option<f32>,
+    pub heading: Option<f32>,
     pub created_at: String,
 }
 
@@ -57,6 +63,8 @@ pub async fn report(
         lat: ActiveValue::Set(req.lat),
         lng: ActiveValue::Set(req.lng),
         accuracy: ActiveValue::Set(req.accuracy),
+        speed: ActiveValue::Set(req.speed),
+        heading: ActiveValue::Set(req.heading),
         created_at: ActiveValue::Set(now.into()),
         ..Default::default()
     };
@@ -72,7 +80,7 @@ pub async fn report(
         .flatten()
         .and_then(|u| u.display_name);
 
-    // Broadcast to WebSocket room (create channel if first location in room)
+    // Broadcast to WebSocket room (includes speed + heading for live map)
     let msg = serde_json::json!({
         "id": id.to_string(),
         "user_id": auth.id.to_string(),
@@ -80,6 +88,8 @@ pub async fn report(
         "lat": req.lat,
         "lng": req.lng,
         "accuracy": req.accuracy,
+        "speed": req.speed,
+        "heading": req.heading,
         "created_at": now.to_rfc3339(),
     });
     let mut rooms = state.rooms.write().await;
@@ -95,6 +105,8 @@ pub async fn report(
         lat: req.lat,
         lng: req.lng,
         accuracy: req.accuracy,
+        speed: req.speed,
+        heading: req.heading,
         created_at: now.to_rfc3339(),
     }))
 }
@@ -159,6 +171,8 @@ pub async fn list(
             lat: l.lat,
             lng: l.lng,
             accuracy: l.accuracy,
+            speed: l.speed,
+            heading: l.heading,
             created_at: l.created_at.to_rfc3339(),
         })
         .collect();
