@@ -4,7 +4,9 @@ use axum::{
     Router,
 };
 
-use crate::handlers::{fuel, gas_stations, location, posts, reels, rooms, rust_practice, trips, waypoints};
+use crate::handlers::{
+    fuel, gas_stations, location, posts, reels, rooms, rust_practice, trips, waypoints,
+};
 use crate::AppState;
 
 pub fn api() -> Router<AppState> {

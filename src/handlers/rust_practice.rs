@@ -72,7 +72,8 @@ pub struct Step4Payload {
     pub solution: String,
 }
 
-const GEMINI_URL: &str = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+const GEMINI_URL: &str =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
 fn build_prompt(topic: &str, mode: GenerateMode) -> String {
     let topic_esc = topic.trim();
@@ -126,15 +127,10 @@ async fn call_gemini(config: &Config, prompt: &str) -> Result<String, AppError> 
     });
 
     let client = reqwest::Client::new();
-    let res = client
-        .post(&url)
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| {
-            tracing::error!("Gemini request failed: {}", e);
-            AppError::Internal
-        })?;
+    let res = client.post(&url).json(&body).send().await.map_err(|e| {
+        tracing::error!("Gemini request failed: {}", e);
+        AppError::Internal
+    })?;
 
     if !res.status().is_success() {
         let status = res.status();
