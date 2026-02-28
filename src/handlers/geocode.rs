@@ -33,11 +33,7 @@ pub async fn search(
         .zip(params.near_lng)
         .map(|(lat, lng)| format!(":{:.2}:{:.2}", lat, lng))
         .unwrap_or_default();
-    let cache_key = format!(
-        "geocode:v1:{}{}",
-        &q[..q.len().min(120)],
-        near_suffix
-    );
+    let cache_key = format!("geocode:v1:{}{}", &q[..q.len().min(120)], near_suffix);
 
     // Try cache first
     let mut redis = state.redis.clone();

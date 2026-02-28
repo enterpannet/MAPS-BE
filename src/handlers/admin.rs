@@ -64,17 +64,17 @@ pub async fn update_role_handler(
     require_admin(&auth)?;
 
     if body.role != "admin" && body.role != "member" {
-        return Err(AppError::BadRequest("role must be 'admin' or 'member'".into()));
+        return Err(AppError::BadRequest(
+            "role must be 'admin' or 'member'".into(),
+        ));
     }
 
-    let id = Uuid::parse_str(&user_id)
-        .map_err(|_| AppError::BadRequest("Invalid user id".into()))?;
+    let id =
+        Uuid::parse_str(&user_id).map_err(|_| AppError::BadRequest("Invalid user id".into()))?;
 
     // Prevent admin from demoting themselves
     if id == auth.id && body.role != "admin" {
-        return Err(AppError::BadRequest(
-            "Cannot change your own role".into(),
-        ));
+        return Err(AppError::BadRequest("Cannot change your own role".into()));
     }
 
     let user = user::Entity::find_by_id(id)
