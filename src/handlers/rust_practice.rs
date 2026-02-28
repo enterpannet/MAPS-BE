@@ -337,8 +337,8 @@ pub async fn delete_topic(
         return Err(AppError::Forbidden);
     }
 
-    let id = Uuid::parse_str(&topic_id)
-        .map_err(|_| AppError::BadRequest("Invalid topic id".into()))?;
+    let id =
+        Uuid::parse_str(&topic_id).map_err(|_| AppError::BadRequest("Invalid topic id".into()))?;
 
     rust_practice_topic::Entity::delete_by_id(id)
         .exec(&state.db)
