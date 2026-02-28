@@ -23,10 +23,13 @@ async fn main() -> anyhow::Result<()> {
     let db = db::connect(&config.database_url).await?;
     let redis = db::connect_redis(&config.redis_url).await?;
 
-    // Run migrations
-    if let Err(e) = migrate::run_migrations(&config.database_url).await {
-        tracing::warn!("Migration skipped: {e}. Run migrations manually.");
-    }
+    // Run migrations (ถ้าล้มเหลวจะไม่สตาร์ทแอป)
+    migrate::run_migrations(&config.database_url)
+        .await
+        .map_err(|e| {
+            tracing::error!("Migration failed: {}", e);
+            e
+        })?;
 
     let app = Router::new()
         .route(
