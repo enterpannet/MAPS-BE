@@ -161,7 +161,7 @@ async fn call_gemini(
     });
 
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
+        .timeout(std::time::Duration::from_secs(300))
         .build()
         .map_err(|_| AppError::Internal)?;
     let res = client.post(&url).json(&body).send().await.map_err(|e| {
@@ -217,7 +217,7 @@ async fn call_kilo(prompt: &str, api_key: &str, model: &str) -> Result<String, A
     });
 
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
+        .timeout(std::time::Duration::from_secs(300))
         .build()
         .map_err(|_| AppError::Internal)?;
     let res = client
