@@ -1,4 +1,4 @@
-//! สร้างโจทย์และข้อมูลศึกษา Rust ด้วย Gemini API + บันทึก/โหลดจาก DB
+//! สร้างโจทย์และข้อมูลศึกษา Rust ด้วย AI (Gemini, Kilo.ai หรือ provider อื่น)
 
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
@@ -12,7 +12,7 @@ use crate::middleware::auth::AuthUser;
 use crate::models::rust_practice_topic;
 use crate::AppState;
 
-// ─── Gemini generate ──────────────────────────────────────────────────────────
+// ─── AI Generate (multi-provider) ─────────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
 pub struct GenerateRequest {
@@ -79,6 +79,9 @@ pub struct Step4Payload {
 
 const GEMINI_BASE: &str = "https://generativelanguage.googleapis.com/v1beta/models";
 const GEMINI_MODEL_DEFAULT: &str = "gemini-2.0-flash";
+
+const KILO_CHAT_URL: &str = "https://api.kilo.ai/api/gateway/chat/completions";
+const KILO_MODEL_DEFAULT: &str = "anthropic/claude-sonnet-4";
 
 fn build_prompt(topic: &str, mode: GenerateMode) -> String {
     let topic_esc = topic.trim();
@@ -193,6 +196,74 @@ async fn call_gemini(
     Ok(text)
 }
 
+/// Kilo.ai (OpenAI-compatible) chat completion
+async fn call_kilo(
+    prompt: &str,
+    api_key: &str,
+    model: &str,
+) -> Result<String, AppError> {
+    let key = api_key.trim();
+    if key.is_empty() {
+        return Err(AppError::BadRequest(
+            "กรุณากรอก Kilo API Key ในหน้าตั้งค่า".into(),
+        ));
+    }
+
+    let body = serde_json::json!({
+        "model": model,
+        "messages": [{ "role": "user", "content": prompt }],
+        "max_tokens": 8192,
+        "temperature": 0.35
+    });
+
+    let res = reqwest::Client::new()
+        .post(KILO_CHAT_URL)
+        .header("Authorization", format!("Bearer {}", key))
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| {
+            tracing::error!("Kilo request failed: {}", e);
+            AppError::Internal
+        })?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let text = res.text().await.unwrap_or_default();
+        tracing::error!("Kilo API error {}: {}", status, text);
+        let msg = serde_json::from_str::<serde_json::Value>(&text)
+            .ok()
+            .and_then(|j| {
+                j.get("error")
+                    .and_then(|e| e.get("message"))
+                    .and_then(|m| m.as_str())
+                    .map(|s| s.to_string())
+            })
+            .unwrap_or_else(|| format!("Kilo API: {}", status));
+        return Err(AppError::BadRequest(msg));
+    }
+
+    let json: serde_json::Value = res.json().await.map_err(|_| AppError::Internal)?;
+    let text = json
+        .get("choices")
+        .and_then(|c| c.get(0))
+        .and_then(|c| c.get("message"))
+        .and_then(|m| m.get("content"))
+        .and_then(|t| t.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    Ok(text)
+}
+
+fn get_header(headers: &HeaderMap, name: &str) -> Option<String> {
+    headers
+        .get(name)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
 pub async fn generate(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -203,15 +274,26 @@ pub async fn generate(
         return Err(AppError::BadRequest("กรุณาระบุหัวข้อ (topic)".into()));
     }
 
-    let api_key_override = headers
-        .get("x-gemini-api-key")
-        .and_then(|v: &axum::http::HeaderValue| v.to_str().ok());
-    let model_override = headers
-        .get("x-gemini-model")
-        .and_then(|v: &axum::http::HeaderValue| v.to_str().ok());
-
+    let provider = get_header(&headers, "x-ai-provider").unwrap_or_else(|| "gemini".into());
     let prompt = build_prompt(req.topic.trim(), req.mode);
-    let raw = call_gemini(&state.config, &prompt, api_key_override, model_override).await?;
+
+    let raw = if provider.to_lowercase() == "kilo" {
+        let key = get_header(&headers, "x-ai-api-key")
+            .or_else(|| get_header(&headers, "x-kilo-api-key"))
+            .ok_or_else(|| {
+                AppError::BadRequest("เมื่อใช้ Kilo กรุณากรอก API Key ในหน้าตั้งค่า (AI Provider = Kilo)".into())
+            })?;
+        let model = get_header(&headers, "x-ai-model").unwrap_or_else(|| KILO_MODEL_DEFAULT.into());
+        call_kilo(&prompt, &key, &model).await?
+    } else {
+        let api_key_override = headers
+            .get("x-gemini-api-key")
+            .and_then(|v: &axum::http::HeaderValue| v.to_str().ok());
+        let model_override = headers
+            .get("x-gemini-model")
+            .and_then(|v: &axum::http::HeaderValue| v.to_str().ok());
+        call_gemini(&state.config, &prompt, api_key_override, model_override).await?
+    };
 
     let raw_clean = raw
         .trim()
@@ -223,8 +305,8 @@ pub async fn generate(
     match req.mode {
         GenerateMode::Study => {
             let step1: Step1Payload = serde_json::from_str(raw_clean).map_err(|e| {
-                tracing::warn!("Gemini study JSON parse error: {} raw: {}", e, raw_clean);
-                AppError::BadRequest(format!("ไม่สามารถ parse คำตอบจาก Gemini: {}", e))
+                tracing::warn!("AI study JSON parse error: {} raw: {}", e, raw_clean);
+                AppError::BadRequest(format!("ไม่สามารถ parse คำตอบจาก AI: {}", e))
             })?;
             Ok(Json(GenerateResponse {
                 ok: true,
@@ -237,8 +319,8 @@ pub async fn generate(
         }
         GenerateMode::Full => {
             let full: FullPayload = serde_json::from_str(raw_clean).map_err(|e| {
-                tracing::warn!("Gemini full JSON parse error: {} raw: {}", e, raw_clean);
-                AppError::BadRequest(format!("ไม่สามารถ parse คำตอบจาก Gemini: {}", e))
+                tracing::warn!("AI full JSON parse error: {} raw: {}", e, raw_clean);
+                AppError::BadRequest(format!("ไม่สามารถ parse คำตอบจาก AI: {}", e))
             })?;
             Ok(Json(GenerateResponse {
                 ok: true,
