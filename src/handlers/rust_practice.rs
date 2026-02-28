@@ -125,7 +125,11 @@ async fn call_gemini(
     let key = api_key_override
         .filter(|s| !s.trim().is_empty())
         .or_else(|| config.gemini_api_key.as_deref())
-        .ok_or_else(|| AppError::BadRequest("กรุณาตั้งค่า GEMINI_API_KEY ในเซิร์ฟเวอร์ หรือกรอก API Key ในหน้าตั้งค่า".into()))?;
+        .ok_or_else(|| {
+            AppError::BadRequest(
+                "กรุณาตั้งค่า GEMINI_API_KEY ในเซิร์ฟเวอร์ หรือกรอก API Key ในหน้าตั้งค่า".into(),
+            )
+        })?;
 
     let model = model_override
         .filter(|s| !s.trim().is_empty())
